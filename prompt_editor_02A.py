@@ -446,54 +446,67 @@ else:
             href = f'<a href="data:file/json;base64,{b64}" download="{filename}">Click to download {filename}</a>'
             st.markdown(href, unsafe_allow_html=True)
         
+        # 업로드된 파일 처리 함수 정의
+        def process_uploaded_file():
+            if "uploaded_file" in st.session_state and st.session_state.uploaded_file is not None:
+                try:
+                    # 업로드된 파일 내용 읽기
+                    content = st.session_state.uploaded_file.read()
+                    prompt_data = json.loads(content.decode())
+                    
+                    # 세션 상태 업데이트
+                    st.session_state.prompt_name = prompt_data["name"]
+                    st.session_state.versions = prompt_data["versions"]
+                    st.session_state.current_version = prompt_data["current_version"]
+                    
+                    # 프롬프트 ID 설정
+                    if "prompt_id" in prompt_data:
+                        st.session_state.current_prompt_id = prompt_data["prompt_id"]
+                    else:
+                        # 이전에 저장된 프롬프트용 ID 생성
+                        st.session_state.current_prompt_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                    
+                    # 템플릿 로드
+                    if "template_user_prompt" in prompt_data:
+                        st.session_state.template_user_prompt = prompt_data["template_user_prompt"]
+                    else:
+                        st.session_state.template_user_prompt = ""
+                    
+                    # 변수는 항상 빈 상태로 초기화
+                    st.session_state.variables = {}
+                    
+                    # 시스템 프롬프트 로드
+                    if "system_prompt" in prompt_data:
+                        st.session_state.system_prompt = prompt_data["system_prompt"]
+                    else:
+                        st.session_state.system_prompt = ""
+                    
+                    # 현재 버전 로드
+                    current_idx = st.session_state.current_version - 1
+                    if st.session_state.versions and 0 <= current_idx < len(st.session_state.versions):
+                        version = st.session_state.versions[current_idx]
+                        st.session_state.system_prompt = version["system_prompt"]
+                        st.session_state.user_prompt = version["user_prompt"]
+                        if "template_user_prompt" in version:
+                            st.session_state.template_user_prompt = version["template_user_prompt"]
+                    
+                    st.success(f"Prompt '{st.session_state.prompt_name}' successfully uploaded!")
+                    
+                    # 파일 업로더 상태 초기화
+                    st.session_state.uploaded_file = None
+                    
+                except Exception as e:
+                    st.error(f"Error uploading prompt file: {str(e)}")
+        
+        # 파일이 업로드되면 세션 상태에 저장
+        def on_file_upload():
+            st.session_state.uploaded_file = uploaded_file
+        
         # 업로드 기능
-        uploaded_file = st.file_uploader("📤 Upload Prompt File", type=["json"])
-        if uploaded_file is not None:
-            try:
-                # 업로드된 파일 내용 읽기
-                content = uploaded_file.read()
-                prompt_data = json.loads(content.decode())
-                
-                # 세션 상태 업데이트
-                st.session_state.prompt_name = prompt_data["name"]
-                st.session_state.versions = prompt_data["versions"]
-                st.session_state.current_version = prompt_data["current_version"]
-                
-                # 프롬프트 ID 설정
-                if "prompt_id" in prompt_data:
-                    st.session_state.current_prompt_id = prompt_data["prompt_id"]
-                else:
-                    # 이전에 저장된 프롬프트용 ID 생성
-                    st.session_state.current_prompt_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                
-                # 템플릿 로드
-                if "template_user_prompt" in prompt_data:
-                    st.session_state.template_user_prompt = prompt_data["template_user_prompt"]
-                else:
-                    st.session_state.template_user_prompt = ""
-                
-                # 변수는 항상 빈 상태로 초기화
-                st.session_state.variables = {}
-                
-                # 시스템 프롬프트 로드
-                if "system_prompt" in prompt_data:
-                    st.session_state.system_prompt = prompt_data["system_prompt"]
-                else:
-                    st.session_state.system_prompt = ""
-                
-                # 현재 버전 로드
-                current_idx = st.session_state.current_version - 1
-                if st.session_state.versions and 0 <= current_idx < len(st.session_state.versions):
-                    version = st.session_state.versions[current_idx]
-                    st.session_state.system_prompt = version["system_prompt"]
-                    st.session_state.user_prompt = version["user_prompt"]
-                    if "template_user_prompt" in version:
-                        st.session_state.template_user_prompt = version["template_user_prompt"]
-                
-                st.success(f"Prompt '{st.session_state.prompt_name}' successfully uploaded!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error uploading prompt file: {str(e)}")
+        uploaded_file = st.file_uploader("📤 Upload Prompt File", type=["json"], on_change=on_file_upload)
+        
+        # 업로드된 파일 처리
+        process_uploaded_file()
 
         # 새 프롬프트 초기화 버튼
         if st.button("🔄 :gray[**Create New Prompt**]", key="new_prompt_button"):
