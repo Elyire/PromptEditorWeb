@@ -20,7 +20,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 
-# 페이지 구성 설정
+# 페이지 구성 설정.
 st.set_page_config(layout="wide", page_title="Prompt Editor")
 
 # 세션 상태 초기화
